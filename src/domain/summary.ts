@@ -42,6 +42,17 @@ export function formatPayTo(payTo: PayTo): string {
 }
 
 /**
+ * What the Copy button puts on the clipboard. Wallet apps want a bare mobile
+ * number, so the spaces and dashes people type for readability are dropped;
+ * bank and other details are copied as typed.
+ */
+export function accountForCopy(payTo: PayTo): string {
+  return payTo.method === "gcash" || payTo.method === "maya"
+    ? payTo.account.replace(/[\s-]/g, "")
+    : payTo.account;
+}
+
+/**
  * One line saying where a person stands once the restaurant's change and
  * any transfers ticked as paid are accounted for.
  */

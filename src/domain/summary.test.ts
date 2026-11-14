@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import { emptyBill, type Bill } from "./bill";
 import { settle } from "./settle";
 import { computeTotals } from "./split";
-import { balanceNote, buildSummary, formatPayTo, settlementBlockers } from "./summary";
+import {
+  accountForCopy,
+  balanceNote,
+  buildSummary,
+  formatPayTo,
+  settlementBlockers,
+} from "./summary";
 
 const bill: Bill = {
   ...emptyBill(),
@@ -123,6 +129,16 @@ describe("balanceNote after paid marks", () => {
       "Paid ₱100.00, all settled",
       "Owes ₱100.00",
     ]);
+  });
+});
+
+describe("accountForCopy", () => {
+  it("copies a bare mobile number for wallets and bank details as typed", () => {
+    expect(accountForCopy({ method: "gcash", account: "0917 123-4567" })).toBe("09171234567");
+    expect(accountForCopy({ method: "maya", account: "0918 000 0000" })).toBe("09180000000");
+    expect(accountForCopy({ method: "bank", account: "BPI 1234 5678 90" })).toBe(
+      "BPI 1234 5678 90",
+    );
   });
 });
 

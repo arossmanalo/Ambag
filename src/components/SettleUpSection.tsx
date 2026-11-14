@@ -6,6 +6,7 @@ import { unpaidTransferCount, type Settlement, type Transfer } from "../domain/s
 import type { BillTotals } from "../domain/split";
 import {
   PAY_METHOD_LABELS,
+  accountForCopy,
   balanceNote,
   buildSummary,
   formatPayTo,
@@ -63,7 +64,7 @@ function TransferRow({
                 type="button"
                 className="text-button"
                 aria-label={`Copy ${toName}'s ${PAY_METHOD_LABELS[payTo.method]} details`}
-                onClick={() => onCopyAccount(payTo.account)}
+                onClick={() => onCopyAccount(accountForCopy(payTo))}
               >
                 {isCopied ? (
                   <Check size={16} strokeWidth={2} aria-hidden="true" />
