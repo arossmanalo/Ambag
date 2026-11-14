@@ -46,6 +46,41 @@ function OrderRow({ bill, dispatch, item, position }: OrderRowProps) {
             }
           }}
         />
+      </div>
+
+      <div className="order-row__people">
+        {bill.people.length === 0 ? (
+          <p className="hint">Add people above, then pick who ordered this.</p>
+        ) : (
+          <div className="chips" role="group" aria-label={`Who ordered ${label}`}>
+            {bill.people.map((person) => {
+              const isOn = item.sharedBy.includes(person.id);
+              return (
+                <button
+                  key={person.id}
+                  type="button"
+                  className="chip"
+                  aria-pressed={isOn}
+                  onClick={() =>
+                    dispatch({ type: "toggleSharer", itemId: item.id, personId: person.id })
+                  }
+                >
+                  {isOn && <Check size={16} strokeWidth={2} aria-hidden="true" />}
+                  {person.name}
+                </button>
+              );
+            })}
+            {bill.people.length > 1 && item.sharedBy.length < bill.people.length && (
+              <button
+                type="button"
+                className="chip chip--action"
+                onClick={() => dispatch({ type: "shareWithEveryone", itemId: item.id })}
+              >
+                All
+              </button>
+            )}
+          </div>
+        )}
         <button
           type="button"
           className="icon-button"
@@ -55,39 +90,6 @@ function OrderRow({ bill, dispatch, item, position }: OrderRowProps) {
           <X size={18} strokeWidth={1.75} aria-hidden="true" />
         </button>
       </div>
-
-      {bill.people.length === 0 ? (
-        <p className="hint">Add people above, then pick who ordered this.</p>
-      ) : (
-        <div className="chips" role="group" aria-label={`Who ordered ${label}`}>
-          {bill.people.map((person) => {
-            const isOn = item.sharedBy.includes(person.id);
-            return (
-              <button
-                key={person.id}
-                type="button"
-                className="chip"
-                aria-pressed={isOn}
-                onClick={() =>
-                  dispatch({ type: "toggleSharer", itemId: item.id, personId: person.id })
-                }
-              >
-                {isOn && <Check size={16} strokeWidth={2} aria-hidden="true" />}
-                {person.name}
-              </button>
-            );
-          })}
-          {bill.people.length > 1 && item.sharedBy.length < bill.people.length && (
-            <button
-              type="button"
-              className="chip chip--action"
-              onClick={() => dispatch({ type: "shareWithEveryone", itemId: item.id })}
-            >
-              Everyone
-            </button>
-          )}
-        </div>
-      )}
       {isUnassigned && bill.people.length > 0 && (
         <p className="field-error">Pick who ordered this.</p>
       )}
@@ -206,27 +208,29 @@ export function OrdersSection({ bill, dispatch }: SectionProps) {
         </ul>
       )}
 
-      <form className="add-row add-row--order" onSubmit={addOrder}>
-        <label className="visually-hidden" htmlFor="new-order-name">
-          Name of the order to add
-        </label>
-        <input
-          id="new-order-name"
-          ref={nameInput}
-          className="text-input"
-          placeholder="Dish or drink"
-          maxLength={MAX_ITEM_NAME}
-          autoComplete="off"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-        />
-        <MoneyInput
-          id="new-order-price"
-          unit="peso"
-          ariaLabel="Price of the order to add"
-          value={priceCentavos}
-          onChange={setPriceCentavos}
-        />
+      <form className="add-order" onSubmit={addOrder}>
+        <div className="add-order__fields">
+          <label className="visually-hidden" htmlFor="new-order-name">
+            Name of the order to add
+          </label>
+          <input
+            id="new-order-name"
+            ref={nameInput}
+            className="text-input"
+            placeholder="Dish or drink"
+            maxLength={MAX_ITEM_NAME}
+            autoComplete="off"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+          />
+          <MoneyInput
+            id="new-order-price"
+            unit="peso"
+            ariaLabel="Price of the order to add"
+            value={priceCentavos}
+            onChange={setPriceCentavos}
+          />
+        </div>
         <button type="submit" className="button" disabled={priceCentavos === null || isFull}>
           <Plus size={18} strokeWidth={1.75} aria-hidden="true" />
           Add order

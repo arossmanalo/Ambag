@@ -1,6 +1,6 @@
 import type { Bill } from "./bill";
 import { formatPesos } from "./money";
-import type { Settlement } from "./settle";
+import type { PersonBalance, Settlement } from "./settle";
 import type { BillTotals } from "./split";
 
 export function personNames(bill: Bill): Map<string, string> {
@@ -25,6 +25,20 @@ export function settlementBlockers(totals: BillTotals, settlement: Settlement): 
     );
   }
   return blockers;
+}
+
+/** One line saying where a person stands once the restaurant's change is accounted for. */
+export function balanceNote(entry: PersonBalance): string {
+  const paidCentavos = entry.handedCentavos - entry.changeCentavos;
+  const paid = paidCentavos > 0 ? `Paid ${formatPesos(paidCentavos)}` : null;
+  if (entry.balanceCentavos > 0) {
+    return `${paid}, gets back ${formatPesos(entry.balanceCentavos)}`;
+  }
+  if (entry.balanceCentavos < 0) {
+    const owed = formatPesos(-entry.balanceCentavos);
+    return paid === null ? `Owes ${owed}` : `${paid}, still owes ${owed}`;
+  }
+  return paid === null ? "Nothing to pay" : `${paid}, all square`;
 }
 
 /** Plain text for pasting into a group chat. */

@@ -5,6 +5,8 @@
   --rule: #d9d3c2;
   --rule-strong: #a9a28d;
   --ink-soft: #5f5b4d;
+  /* Placeholders only: lighter than real values so an empty field reads as empty */
+  --ink-faint: #8d8876;
   --ink: #23261f;
 
   --accent: #1f6b45;
@@ -33,5 +35,6 @@
   --space-12: 48px;
 
   --radius: 4px;
+  --shadow-float: 0 -4px 16px rgb(35 38 31 / 0.12);
   --control-height: 44px;
 }

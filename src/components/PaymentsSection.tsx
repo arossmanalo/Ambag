@@ -1,6 +1,7 @@
 import type { Dispatch } from "react";
 import type { Bill } from "../domain/bill";
 import { formatPesos } from "../domain/money";
+import type { Settlement } from "../domain/settle";
 import type { BillAction } from "../state/billReducer";
 import { MoneyInput } from "./MoneyInput";
 
@@ -8,14 +9,14 @@ type PaymentsSectionProps = {
   bill: Bill;
   dispatch: Dispatch<BillAction>;
   totalCentavos: number;
-  handedTotalCentavos: number;
+  settlement: Settlement;
 };
 
 export function PaymentsSection({
   bill,
   dispatch,
   totalCentavos,
-  handedTotalCentavos,
+  settlement,
 }: PaymentsSectionProps) {
   const handedByPerson = new Map(
     bill.payments.map((payment) => [payment.personId, payment.handedCentavos]),
@@ -54,10 +55,28 @@ export function PaymentsSection({
               </li>
             ))}
           </ul>
-          <p className="tally">
-            Handed over <span className="amount">{formatPesos(handedTotalCentavos)}</span> for a
-            bill of <span className="amount">{formatPesos(totalCentavos)}</span>
-          </p>
+          <dl className="receipt tally">
+            <div className="receipt__row">
+              <dt>Bill total</dt>
+              <dd className="amount">{formatPesos(totalCentavos)}</dd>
+            </div>
+            <div className="receipt__row">
+              <dt>Handed over</dt>
+              <dd className="amount">{formatPesos(settlement.handedTotalCentavos)}</dd>
+            </div>
+            {settlement.unpaidCentavos > 0 && (
+              <div className="receipt__row receipt__row--total tally__short">
+                <dt>Still to cover</dt>
+                <dd className="amount">{formatPesos(settlement.unpaidCentavos)}</dd>
+              </div>
+            )}
+            {settlement.changeTotalCentavos > 0 && (
+              <div className="receipt__row receipt__row--total">
+                <dt>Change from the restaurant</dt>
+                <dd className="amount">{formatPesos(settlement.changeTotalCentavos)}</dd>
+              </div>
+            )}
+          </dl>
         </>
       )}
     </section>

@@ -3,14 +3,27 @@ import { useEffect, useState } from "react";
 import { OrdersSection } from "./components/OrdersSection";
 import { PaymentsSection } from "./components/PaymentsSection";
 import { PeopleSection } from "./components/PeopleSection";
-import { SettleUpSection } from "./components/SettleUpSection";
+import { ResultBar } from "./components/ResultBar";
+import { SETTLE_UP_ID, SettleUpSection } from "./components/SettleUpSection";
 import { SharedBillView } from "./components/SharedBillView";
 import { MAX_TITLE, emptyBill, isBillEmpty, type Bill } from "./domain/bill";
-import { settle } from "./domain/settle";
-import { computeTotals } from "./domain/split";
+import { settle, type Settlement } from "./domain/settle";
+import { computeTotals, type BillTotals } from "./domain/split";
+import { settlementBlockers } from "./domain/summary";
 import { useBill } from "./state/useBill";
 import { isStorageAvailable } from "./storage/localBill";
 import { readBillFromHash } from "./storage/shareLink";
+
+function resultStatus(totals: BillTotals, settlement: Settlement): string {
+  if (settlementBlockers(totals, settlement).length > 0) {
+    return "Not settled yet";
+  }
+  const count = settlement.transfers.length;
+  if (count === 0) {
+    return "Everyone is settled";
+  }
+  return count === 1 ? "1 payment to make" : `${count} payments to make`;
+}
 
 export function App() {
   const { bill, dispatch } = useBill();
@@ -46,14 +59,24 @@ export function App() {
 
   const totals = computeTotals(bill);
   const settlement = settle(bill, totals);
+  const isEditing = link.kind !== "bill";
+  const hasResult = bill.people.length > 0 && bill.items.length > 0;
 
   return (
     <div className="page">
       <header className="masthead">
-        <h1 className="masthead__name">Ambag</h1>
-        <p className="masthead__purpose">
-          Split a bill by what each person ordered, then see who pays whom.
-        </p>
+        <div>
+          <h1 className="masthead__name">Ambag</h1>
+          <p className="masthead__purpose">
+            Split a bill by what each person ordered, then see who pays whom.
+          </p>
+        </div>
+        {isEditing && !isBillEmpty(bill) && (
+          <button type="button" className="button button--quiet" onClick={startNewBill}>
+            <FilePlus2 size={18} strokeWidth={1.75} aria-hidden="true" />
+            New bill
+          </button>
+        )}
       </header>
 
       <main>
@@ -90,26 +113,18 @@ export function App() {
               </div>
             )}
 
-            <div className="bill-title">
-              <label className="visually-hidden" htmlFor="bill-title">
-                Bill name
-              </label>
-              <input
-                id="bill-title"
-                className="text-input text-input--title"
-                placeholder="Name this bill, e.g. Friday dinner"
-                maxLength={MAX_TITLE}
-                autoComplete="off"
-                value={bill.title}
-                onChange={(event) => dispatch({ type: "setTitle", title: event.target.value })}
-              />
-              {!isBillEmpty(bill) && (
-                <button type="button" className="button button--quiet" onClick={startNewBill}>
-                  <FilePlus2 size={18} strokeWidth={1.75} aria-hidden="true" />
-                  New bill
-                </button>
-              )}
-            </div>
+            <label className="visually-hidden" htmlFor="bill-title">
+              Bill name
+            </label>
+            <input
+              id="bill-title"
+              className="bill-title"
+              placeholder="Name this bill, e.g. Friday dinner"
+              maxLength={MAX_TITLE}
+              autoComplete="off"
+              value={bill.title}
+              onChange={(event) => dispatch({ type: "setTitle", title: event.target.value })}
+            />
 
             <div className="layout">
               <div className="entry">
@@ -119,11 +134,18 @@ export function App() {
                   bill={bill}
                   dispatch={dispatch}
                   totalCentavos={totals.totalCentavos}
-                  handedTotalCentavos={settlement.handedTotalCentavos}
+                  settlement={settlement}
                 />
               </div>
               <SettleUpSection bill={bill} totals={totals} settlement={settlement} />
             </div>
+            {hasResult && (
+              <ResultBar
+                targetId={SETTLE_UP_ID}
+                totalCentavos={totals.totalCentavos}
+                status={resultStatus(totals, settlement)}
+              />
+            )}
           </>
         )}
       </main>
