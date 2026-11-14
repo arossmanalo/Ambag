@@ -31,8 +31,7 @@ export type BillAction =
   | { type: "setDiscount"; adjustment: Adjustment | null }
   | { type: "setPayment"; personId: string; handedCentavos: number }
   | { type: "setPayTo"; personId: string; payTo: PayTo | null }
-  | { type: "toggleTransferPaid"; transfer: PaidTransfer }
-  | { type: "replace"; bill: Bill };
+  | { type: "toggleTransferPaid"; transfer: PaidTransfer };
 
 function updateItem(bill: Bill, itemId: string, change: (item: Item) => Item): Bill {
   return {
@@ -148,7 +147,5 @@ export function billReducer(bill: Bill, action: BillAction): Bill {
         ],
       };
     }
-    case "replace":
-      return action.bill;
   }
 }

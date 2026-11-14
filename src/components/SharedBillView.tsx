@@ -31,7 +31,7 @@ export function SharedBillView({ bill, onEditCopy, onClose }: SharedBillViewProp
             Edit a copy
           </button>
           <button type="button" className="button button--quiet" onClick={onClose}>
-            Go to my own bill
+            Go to my bills
           </button>
         </div>
       </div>

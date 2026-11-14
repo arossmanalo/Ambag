@@ -1,6 +1,6 @@
 import type { Bill, PayMethod, PayTo } from "./bill";
 import { formatPesos } from "./money";
-import type { PersonBalance, Settlement } from "./settle";
+import { unpaidTransferCount, type PersonBalance, type Settlement } from "./settle";
 import type { BillTotals } from "./split";
 
 export function personNames(bill: Bill): Map<string, string> {
@@ -25,6 +25,27 @@ export function settlementBlockers(totals: BillTotals, settlement: Settlement): 
     );
   }
   return blockers;
+}
+
+export type BillStatus = {
+  label: string;
+  /** "blocked": details missing; "open": payments left; "done": nothing left to pay. */
+  tone: "blocked" | "open" | "done";
+};
+
+/** Where a bill stands, in a few words. */
+export function billStatus(totals: BillTotals, settlement: Settlement): BillStatus {
+  if (settlementBlockers(totals, settlement).length > 0) {
+    return { label: "Not settled yet", tone: "blocked" };
+  }
+  if (settlement.transfers.length === 0) {
+    return { label: "Everyone is settled", tone: "done" };
+  }
+  const count = unpaidTransferCount(settlement);
+  if (count === 0) {
+    return { label: "All payments made", tone: "done" };
+  }
+  return { label: count === 1 ? "1 payment left" : `${count} payments left`, tone: "open" };
 }
 
 export const PAY_METHOD_LABELS: Record<PayMethod, string> = {

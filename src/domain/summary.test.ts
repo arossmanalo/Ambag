@@ -4,6 +4,7 @@ import { settle } from "./settle";
 import { computeTotals } from "./split";
 import {
   accountForCopy,
+  billStatus,
   balanceNote,
   buildSummary,
   formatPayTo,
@@ -129,6 +130,34 @@ describe("balanceNote after paid marks", () => {
       "Paid ₱100.00, all settled",
       "Owes ₱100.00",
     ]);
+  });
+});
+
+describe("billStatus", () => {
+  function statusOf(target: Bill) {
+    const totals = computeTotals(target);
+    return billStatus(totals, settle(target, totals));
+  }
+
+  it("follows a bill from missing payments to fully paid", () => {
+    expect(statusOf({ ...bill, payments: [] })).toEqual({ label: "Not settled yet", tone: "blocked" });
+    expect(statusOf(bill)).toEqual({ label: "1 payment left", tone: "open" });
+    const paid = {
+      ...bill,
+      paidTransfers: [{ fromPersonId: "ben", toPersonId: "ana", amountCentavos: 30_000 }],
+    };
+    expect(statusOf(paid)).toEqual({ label: "All payments made", tone: "done" });
+  });
+
+  it("says when nobody owes anything", () => {
+    const square = {
+      ...bill,
+      payments: [
+        { personId: "ana", handedCentavos: 30_000 },
+        { personId: "ben", handedCentavos: 40_000 },
+      ],
+    };
+    expect(statusOf(square)).toEqual({ label: "Everyone is settled", tone: "done" });
   });
 });
 
