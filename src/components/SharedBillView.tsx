@@ -37,7 +37,7 @@ export function SharedBillView({ bill, onEditCopy, onClose }: SharedBillViewProp
       </div>
 
       <div className="layout">
-        <section className="section" aria-labelledby="shared-orders-heading">
+        <section className="section entry" aria-labelledby="shared-orders-heading">
           <h2 id="shared-orders-heading" className="section__heading">
             {bill.title.trim() === "" ? "Orders" : bill.title}
           </h2>

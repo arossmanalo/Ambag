@@ -54,6 +54,7 @@ textarea {
 /* Page frame */
 
 .page {
+  display: block;
   max-width: 1080px;
   margin: 0 auto;
   padding: var(--space-6) max(var(--space-4), env(safe-area-inset-right)) var(--space-12)
@@ -66,25 +67,59 @@ textarea {
   }
 }
 
+/* A full-width band, so it sits outside .page */
 .masthead {
+  background: var(--accent-deep);
+  color: var(--accent-ink);
+}
+
+.masthead__inner {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
-  margin-bottom: var(--space-6);
+  gap: var(--space-3) var(--space-4);
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: max(var(--space-6), env(safe-area-inset-top))
+    max(var(--space-4), env(safe-area-inset-right)) var(--space-6)
+    max(var(--space-4), env(safe-area-inset-left));
+}
+
+.masthead :focus-visible,
+.result-bar :focus-visible {
+  outline-color: var(--accent-ink);
 }
 
 .masthead__name {
   font-size: var(--text-2xl);
   font-weight: 600;
   line-height: 1.1;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
 .masthead__purpose {
   max-width: 44ch;
-  color: var(--ink-soft);
+  margin-top: var(--space-1);
+  color: var(--accent-ink-soft);
+}
+
+/* On a phone the band stays short so the bill starts on the first screen */
+@media (max-width: 599px) {
+  .masthead__inner {
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    padding-top: max(var(--space-4), env(safe-area-inset-top));
+    padding-bottom: var(--space-4);
+  }
+
+  .masthead__name {
+    font-size: var(--text-xl);
+  }
+
+  .masthead__purpose {
+    font-size: var(--text-sm);
+  }
 }
 
 /* The bill's name is the page's title, so it is set like a heading, not a form field */
@@ -92,7 +127,7 @@ textarea {
   display: block;
   width: 100%;
   min-height: var(--control-height);
-  margin-bottom: var(--space-8);
+  margin-bottom: var(--space-6);
   padding: var(--space-1) 0;
   border: 0;
   border-bottom: 1px dashed var(--rule-strong);
@@ -118,10 +153,26 @@ textarea {
   gap: var(--space-8);
 }
 
+/* The order pad: one sheet holding every entry section */
 .entry {
   display: grid;
-  gap: var(--space-8);
+  gap: var(--space-6);
   min-width: 0;
+  padding: var(--space-6) var(--space-4);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+}
+
+.entry > .section + .section {
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--rule);
+}
+
+@media (min-width: 600px) {
+  .entry {
+    padding: var(--space-8);
+  }
 }
 
 @media (min-width: 900px) {
@@ -134,8 +185,14 @@ textarea {
   .settle {
     position: sticky;
     top: var(--space-6);
-    max-height: calc(100vh - 2 * var(--space-6));
+  }
+
+  /* Leaves room for the torn edge below the paper */
+  .settle__paper {
+    max-height: calc(100vh - 2 * var(--space-6) - var(--space-2));
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--rule-strong) transparent;
   }
 }
 
@@ -143,13 +200,20 @@ textarea {
 
 .section {
   min-width: 0;
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--rule-strong);
+}
+
+.section__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+  margin-bottom: var(--space-3);
 }
 
 .section__heading {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-3);
   margin-bottom: var(--space-3);
   font-size: var(--text-lg);
@@ -158,11 +222,75 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.section__header .section__heading {
+  margin-bottom: 0;
+}
+
 .section__step {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent-deep);
+  color: var(--accent-ink);
   font-family: var(--font-amount);
   font-size: var(--text-xs);
-  font-weight: 400;
+  font-weight: 600;
+}
+
+.section__meta {
   color: var(--ink-soft);
+  font-size: var(--text-sm);
+}
+
+.section__meta .amount {
+  color: var(--ink);
+}
+
+/* Person monograms */
+
+.avatar {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--tone-0);
+  color: var(--accent-ink);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+
+.avatar--sm {
+  width: 22px;
+  height: 22px;
+  font-size: 0.6875rem;
+}
+
+.avatar[data-tone="1"] {
+  background: var(--tone-1);
+}
+
+.avatar[data-tone="2"] {
+  background: var(--tone-2);
+}
+
+.avatar[data-tone="3"] {
+  background: var(--tone-3);
+}
+
+.avatar[data-tone="4"] {
+  background: var(--tone-4);
+}
+
+.avatar[data-tone="5"] {
+  background: var(--tone-5);
 }
 
 .hint {
@@ -300,6 +428,17 @@ textarea {
   background: transparent;
 }
 
+.button--on-dark {
+  border-color: var(--accent-ink-soft);
+  background: transparent;
+  color: var(--accent-ink);
+}
+
+.button--on-dark:hover {
+  border-color: var(--accent-ink);
+  background: var(--accent-strong);
+}
+
 .icon-button {
   display: inline-flex;
   flex: 0 0 auto;
@@ -374,7 +513,14 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-1);
+  gap: var(--space-2);
+}
+
+.payment-row__person {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
 }
 
 .payment-row {
@@ -383,9 +529,10 @@ textarea {
   border-bottom: 1px solid var(--rule);
 }
 
+/* Lines up under the name, past the monogram */
 .person-row__pay-to {
   margin-top: calc(-1 * var(--space-2));
-  padding-bottom: var(--space-2);
+  padding: 0 0 var(--space-2) calc(32px + var(--space-2));
   color: var(--ink-soft);
   font-family: var(--font-amount);
   font-size: var(--text-xs);
@@ -399,7 +546,10 @@ textarea {
 .pay-to-editor {
   display: grid;
   gap: var(--space-2);
-  padding: var(--space-1) 0 var(--space-3);
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  background: var(--paper-sunk);
 }
 
 .pay-to-editor__fields {
@@ -424,8 +574,33 @@ textarea {
 }
 
 .tally {
-  margin-top: var(--space-3);
+  margin-top: var(--space-2);
   font-size: var(--text-sm);
+}
+
+/* Shows how much of the bill is covered; the tally below says it in words */
+.meter {
+  height: 8px;
+  margin-top: var(--space-4);
+  border-radius: var(--radius);
+  background: var(--rule);
+  overflow: hidden;
+}
+
+.meter__fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.meter[data-state="short"] .meter__fill {
+  background: var(--danger);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .meter__fill {
+    transition: width 200ms ease-out;
+  }
 }
 
 .tally .receipt__row {
@@ -474,11 +649,25 @@ textarea {
   gap: var(--space-1);
 }
 
+/* Where a new order is written, set apart from the orders already on the bill */
 .add-order {
   display: grid;
   justify-items: start;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  border: 1px dashed var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--paper-sunk);
+}
+
+.add-order__heading,
+.settle__subheading {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
 }
 
 .add-order__people {
@@ -488,20 +677,25 @@ textarea {
 
 .add-order__fields {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
   width: 100%;
+}
+
+.add-order__fields .text-input {
+  flex: 1 1 160px;
 }
 
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
   min-height: var(--control-height);
   max-width: 100%;
-  padding: 0 var(--space-2);
+  padding: 0 var(--space-3) 0 var(--space-2);
   border: 1px solid var(--rule-strong);
   border-radius: var(--radius);
-  background: transparent;
+  background: var(--paper-raised);
   font-size: var(--text-sm);
   overflow-wrap: anywhere;
   cursor: pointer;
@@ -519,7 +713,9 @@ textarea {
 }
 
 .chip--action {
+  padding: 0 var(--space-3);
   border-style: dashed;
+  background: transparent;
   color: var(--ink-soft);
 }
 
@@ -572,22 +768,101 @@ textarea {
   font-weight: 600;
 }
 
-/* Settle up: the receipt */
+/* Settle up: the printed receipt */
 
 .settle {
-  padding: var(--space-6) var(--space-4);
-  border: 1px solid var(--rule-strong);
-  border-radius: var(--radius);
+  filter: var(--shadow-paper);
+}
+
+.settle__paper {
+  padding: var(--space-6) var(--space-4) var(--space-4);
+  border-radius: var(--radius) var(--radius) 0 0;
   background: var(--paper-raised);
+}
+
+@media (min-width: 600px) {
+  .settle__paper {
+    padding: var(--space-6) var(--space-6) var(--space-4);
+  }
+}
+
+/* The torn bottom edge: a row of paper teeth */
+.settle::after {
+  content: "";
+  display: block;
+  height: var(--space-2);
+  background: conic-gradient(from -45deg at 50% 100%, var(--paper-raised) 90deg, transparent 0) 0
+    0 / 16px 100% repeat-x;
+}
+
+.settle__head {
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px dashed var(--rule-strong);
+}
+
+.settle__head .section__heading {
+  margin-bottom: 0;
+}
+
+.settle__bill-name {
+  margin-top: var(--space-4);
+  color: var(--ink-soft);
+  font-family: var(--font-amount);
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.settle__total {
+  display: grid;
+}
+
+.settle__total-label {
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+.settle__total .amount {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.progress {
+  margin-top: var(--space-3);
+}
+
+.progress__label {
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+}
+
+.progress__steps {
+  display: flex;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  padding: 0;
+  list-style: none;
+}
+
+.progress__steps li {
+  flex: 1 1 0;
+  height: 6px;
+  border-radius: var(--radius);
+  background: var(--rule);
+}
+
+.progress__steps li[data-paid] {
+  background: var(--accent);
 }
 
 .settle__subheading {
   margin: var(--space-6) 0 var(--space-2);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
 }
 
 .receipt__row {
@@ -630,14 +905,14 @@ textarea {
 
 .share-row {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-4);
+  align-items: center;
+  gap: var(--space-3);
   padding: var(--space-2) 0;
   border-top: 1px solid var(--rule);
 }
 
 .share-row__person {
+  flex: 1 1 auto;
   min-width: 0;
   font-weight: 600;
   overflow-wrap: anywhere;
@@ -749,6 +1024,10 @@ textarea {
 }
 
 .transfer__people {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) 6px;
   min-width: 0;
   color: var(--ink-soft);
   overflow-wrap: anywhere;
@@ -801,9 +1080,20 @@ textarea {
   gap: var(--space-3);
   padding: var(--space-2) max(var(--space-4), env(safe-area-inset-right))
     max(var(--space-2), env(safe-area-inset-bottom)) max(var(--space-4), env(safe-area-inset-left));
-  border-top: 1px solid var(--rule-strong);
-  background: var(--paper-raised);
+  background: var(--accent-deep);
+  color: var(--accent-ink);
   box-shadow: var(--shadow-float);
+}
+
+.result-bar .button {
+  border-color: var(--paper-raised);
+  background: var(--paper-raised);
+  color: var(--accent-deep);
+}
+
+.result-bar .button:hover {
+  border-color: var(--accent-wash);
+  background: var(--accent-wash);
 }
 
 .result-bar__total {
@@ -814,7 +1104,7 @@ textarea {
 }
 
 .result-bar__label {
-  color: var(--ink-soft);
+  color: var(--accent-ink-soft);
   font-size: var(--text-xs);
   font-weight: 400;
 }

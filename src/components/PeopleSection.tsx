@@ -8,8 +8,10 @@ import {
   type Bill,
   type Person,
 } from "../domain/bill";
+import { avatarTones } from "../domain/avatar";
 import { formatPayTo } from "../domain/summary";
 import type { BillAction } from "../state/billReducer";
+import { Avatar } from "./Avatar";
 import { PayToEditor } from "./PayToEditor";
 
 type SectionProps = {
@@ -17,9 +19,9 @@ type SectionProps = {
   dispatch: Dispatch<BillAction>;
 };
 
-type PersonRowProps = SectionProps & { person: Person };
+type PersonRowProps = SectionProps & { person: Person; tone: number | undefined };
 
-function PersonRow({ bill, dispatch, person }: PersonRowProps) {
+function PersonRow({ bill, dispatch, person, tone }: PersonRowProps) {
   const [draft, setDraft] = useState<string | null>(null);
   const [isEditingPayTo, setIsEditingPayTo] = useState(false);
   const payToButtonLabel =
@@ -50,6 +52,7 @@ function PersonRow({ bill, dispatch, person }: PersonRowProps) {
   return (
     <li className="person-row">
       <div className="person-row__main">
+        <Avatar name={person.name} tone={tone} />
         <input
           className="text-input text-input--quiet"
           aria-label={`Name of ${person.name}`}
@@ -105,6 +108,7 @@ export function PeopleSection({ bill, dispatch }: SectionProps) {
   const trimmed = name.trim();
   const isDuplicate = trimmed !== "" && isNameTaken(bill.people, trimmed);
   const isFull = bill.people.length >= MAX_PEOPLE;
+  const tones = avatarTones(bill.people);
 
   function addPerson(event: FormEvent) {
     event.preventDefault();
@@ -117,10 +121,17 @@ export function PeopleSection({ bill, dispatch }: SectionProps) {
 
   return (
     <section className="section" aria-labelledby="people-heading">
-      <h2 id="people-heading" className="section__heading">
-        <span className="section__step">01</span>
-        People
-      </h2>
+      <div className="section__header">
+        <h2 id="people-heading" className="section__heading">
+          <span className="section__step">1</span>
+          People
+        </h2>
+        {bill.people.length > 0 && (
+          <p className="section__meta">
+            {bill.people.length === 1 ? "1 person" : `${bill.people.length} people`}
+          </p>
+        )}
+      </div>
 
       {bill.people.length === 0 ? (
         <p className="hint">Nobody yet. Add everyone who ate, including whoever paid.</p>
@@ -128,13 +139,19 @@ export function PeopleSection({ bill, dispatch }: SectionProps) {
         <>
           <ul className="plain-list">
             {bill.people.map((person) => (
-              <PersonRow key={person.id} bill={bill} dispatch={dispatch} person={person} />
+              <PersonRow
+                key={person.id}
+                bill={bill}
+                dispatch={dispatch}
+                person={person}
+                tone={tones.get(person.id)}
+              />
             ))}
           </ul>
           {bill.people.every((person) => person.payTo === undefined) && (
             <p className="hint people-hint">
-              Use the wallet button to add someone's GCash or Maya number, so the others know
-              where to send their share.
+              Use the wallet button to add someone's GCash or Maya number, so the others know where
+              to send their share.
             </p>
           )}
         </>

@@ -1,8 +1,9 @@
 :root {
   /* Warm paper neutrals, tinted toward the green accent */
-  --paper: #f6f3ea;
-  --paper-raised: #fdfbf5;
-  --rule: #d9d3c2;
+  --paper: #ece7d9;
+  --paper-sunk: #f3efe4;
+  --paper-raised: #fcfaf4;
+  --rule: #ddd6c4;
   --rule-strong: #a9a28d;
   --ink-soft: #5f5b4d;
   /* Placeholders only: lighter than real values so an empty field reads as empty */
@@ -11,10 +12,24 @@
 
   --accent: #1f6b45;
   --accent-strong: #17533a;
+  --accent-deep: #133a29;
   --accent-ink: #fdfbf5;
+  /* Secondary text on --accent-deep */
+  --accent-ink-soft: #b8cbbb;
   --accent-wash: #e2ecdf;
   --danger: #9a2f1c;
   --danger-wash: #f5e2da;
+
+  /*
+   * Person monograms. Muted, all at least 4.5:1 against --accent-ink, and only
+   * ever shown next to the person's name, so colour never carries meaning alone.
+   */
+  --tone-0: #a04a2c;
+  --tone-1: #2f5f7e;
+  --tone-2: #7d5b12;
+  --tone-3: #8c3a4b;
+  --tone-4: #2f6a68;
+  --tone-5: #56602a;
 
   --font-text: "IBM Plex Sans", sans-serif;
   --font-amount: "IBM Plex Mono", monospace;
@@ -35,6 +50,9 @@
   --space-12: 48px;
 
   --radius: 4px;
+  /* A filter, not a box-shadow, so it follows the receipt's torn edge */
+  --shadow-paper: drop-shadow(0 1px 1px rgb(35 38 31 / 0.12))
+    drop-shadow(0 6px 16px rgb(35 38 31 / 0.08));
   --shadow-float: 0 -4px 16px rgb(35 38 31 / 0.12);
   --control-height: 44px;
 }

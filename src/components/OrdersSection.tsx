@@ -8,6 +8,7 @@ import {
   type Bill,
   type Item,
 } from "../domain/bill";
+import { formatPesos } from "../domain/money";
 import type { BillAction } from "../state/billReducer";
 import { MoneyInput } from "./MoneyInput";
 import { PeopleChips } from "./PeopleChips";
@@ -152,6 +153,7 @@ export function OrdersSection({ bill, dispatch }: SectionProps) {
   const [pickedIds, setPickedIds] = useState<string[]>([]);
   const nameInput = useRef<HTMLInputElement>(null);
   const isFull = bill.items.length >= MAX_ITEMS;
+  const ordersCentavos = bill.items.reduce((sum, item) => sum + item.priceCentavos, 0);
   // Someone picked here may have been removed from the bill since.
   const sharedBy = bill.people.map((person) => person.id).filter((id) => pickedIds.includes(id));
 
@@ -177,10 +179,18 @@ export function OrdersSection({ bill, dispatch }: SectionProps) {
 
   return (
     <section className="section" aria-labelledby="orders-heading">
-      <h2 id="orders-heading" className="section__heading">
-        <span className="section__step">02</span>
-        Orders
-      </h2>
+      <div className="section__header">
+        <h2 id="orders-heading" className="section__heading">
+          <span className="section__step">2</span>
+          Orders
+        </h2>
+        {bill.items.length > 0 && (
+          <p className="section__meta">
+            {bill.items.length === 1 ? "1 order" : `${bill.items.length} orders`} ·{" "}
+            <span className="amount">{formatPesos(ordersCentavos)}</span>
+          </p>
+        )}
+      </div>
 
       {bill.items.length === 0 ? (
         <p className="hint">
@@ -200,7 +210,10 @@ export function OrdersSection({ bill, dispatch }: SectionProps) {
         </ul>
       )}
 
-      <form className="add-order" onSubmit={addOrder}>
+      <form className="add-order" onSubmit={addOrder} aria-labelledby="add-order-heading">
+        <h3 id="add-order-heading" className="add-order__heading">
+          Add an order
+        </h3>
         <div className="add-order__fields">
           <label className="visually-hidden" htmlFor="new-order-name">
             Name of the order to add

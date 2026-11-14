@@ -1,5 +1,7 @@
 import { Check } from "lucide-react";
+import { avatarTones } from "../domain/avatar";
 import type { Person } from "../domain/bill";
+import { Avatar } from "./Avatar";
 
 type PeopleChipsProps = {
   /** Read by screen readers, e.g. "Who ordered Sisig". */
@@ -11,7 +13,14 @@ type PeopleChipsProps = {
 };
 
 /** One toggle per person, plus a shortcut that ticks everybody. */
-export function PeopleChips({ label, people, selectedIds, onToggle, onSelectAll }: PeopleChipsProps) {
+export function PeopleChips({
+  label,
+  people,
+  selectedIds,
+  onToggle,
+  onSelectAll,
+}: PeopleChipsProps) {
+  const tones = avatarTones(people);
   return (
     <div className="chips" role="group" aria-label={label}>
       {people.map((person) => {
@@ -24,8 +33,9 @@ export function PeopleChips({ label, people, selectedIds, onToggle, onSelectAll 
             aria-pressed={isOn}
             onClick={() => onToggle(person.id)}
           >
-            {isOn && <Check size={16} strokeWidth={2} aria-hidden="true" />}
+            <Avatar name={person.name} tone={tones.get(person.id)} size="sm" />
             {person.name}
+            {isOn && <Check size={16} strokeWidth={2} aria-hidden="true" />}
           </button>
         );
       })}

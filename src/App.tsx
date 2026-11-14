@@ -66,23 +66,25 @@ export function App() {
   const hasResult = bill.people.length > 0 && bill.items.length > 0;
 
   return (
-    <div className="page">
+    <>
       <header className="masthead">
-        <div>
-          <h1 className="masthead__name">Ambag</h1>
-          <p className="masthead__purpose">
-            Split a bill by what each person ordered, then see who pays whom.
-          </p>
+        <div className="masthead__inner">
+          <div>
+            <h1 className="masthead__name">Ambag</h1>
+            <p className="masthead__purpose">
+              Split a bill by what each person ordered, then see who pays whom.
+            </p>
+          </div>
+          {isEditing && !isBillEmpty(bill) && (
+            <button type="button" className="button button--on-dark" onClick={startNewBill}>
+              <FilePlus2 size={18} strokeWidth={1.75} aria-hidden="true" />
+              New bill
+            </button>
+          )}
         </div>
-        {isEditing && !isBillEmpty(bill) && (
-          <button type="button" className="button button--quiet" onClick={startNewBill}>
-            <FilePlus2 size={18} strokeWidth={1.75} aria-hidden="true" />
-            New bill
-          </button>
-        )}
       </header>
 
-      <main>
+      <main className="page">
         {link.kind === "bill" ? (
           <SharedBillView
             bill={link.bill}
@@ -157,6 +159,6 @@ export function App() {
           </>
         )}
       </main>
-    </div>
+    </>
   );
 }
