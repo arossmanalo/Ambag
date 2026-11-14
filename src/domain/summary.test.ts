@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { emptyBill, type Bill } from "./bill";
 import { settle } from "./settle";
 import { computeTotals } from "./split";
-import { balanceNote, buildSummary, settlementBlockers } from "./summary";
+import { balanceNote, buildSummary, formatPayTo, settlementBlockers } from "./summary";
 
 const bill: Bill = {
   ...emptyBill(),
@@ -82,5 +82,53 @@ describe("buildSummary", () => {
     const settlement = settle(unpaid, totals);
     expect(settlementBlockers(totals, settlement)).toHaveLength(1);
     expect(buildSummary(unpaid, totals, settlement)).toContain("Not settled yet");
+  });
+
+  it("adds where to send money and marks transfers already paid", () => {
+    const withDetails: Bill = {
+      ...bill,
+      people: bill.people.map((person) =>
+        person.id === "ana" ? { ...person, payTo: { method: "gcash", account: "0917" } } : person,
+      ),
+      items: [...bill.items, { id: "i4", name: "Halo-halo", priceCentavos: 10_000, sharedBy: ["cy"] }],
+    };
+    const unpaidLines = summaryLines(withDetails);
+    expect(unpaidLines).toContain("Ben pays Ana ₱300.00 via GCash 0917");
+    expect(unpaidLines).toContain("Cy pays Ana ₱100.00 via GCash 0917");
+
+    const benPaid = {
+      ...withDetails,
+      paidTransfers: [{ fromPersonId: "ben", toPersonId: "ana", amountCentavos: 30_000 }],
+    };
+    const paidLines = summaryLines(benPaid);
+    expect(paidLines).toContain("Ben paid Ana ₱300.00");
+    expect(paidLines).toContain("Cy pays Ana ₱100.00 via GCash 0917");
+  });
+});
+
+function summaryLines(target: Bill): string[] {
+  const totals = computeTotals(target);
+  return buildSummary(target, totals, settle(target, totals)).split("\n");
+}
+
+describe("balanceNote after paid marks", () => {
+  it("reports what is left once some transfers are ticked", () => {
+    const withCy: Bill = {
+      ...bill,
+      items: [...bill.items, { id: "i4", name: "Halo-halo", priceCentavos: 10_000, sharedBy: ["cy"] }],
+      paidTransfers: [{ fromPersonId: "ben", toPersonId: "ana", amountCentavos: 30_000 }],
+    };
+    expect(notesFor(withCy)).toEqual([
+      "Paid ₱700.00, still to get back ₱100.00",
+      "Paid ₱100.00, all settled",
+      "Owes ₱100.00",
+    ]);
+  });
+});
+
+describe("formatPayTo", () => {
+  it("names the wallet, except for free-form details", () => {
+    expect(formatPayTo({ method: "maya", account: "0918 000 0000" })).toBe("Maya 0918 000 0000");
+    expect(formatPayTo({ method: "other", account: "BPI 1234 5678 90" })).toBe("BPI 1234 5678 90");
   });
 });

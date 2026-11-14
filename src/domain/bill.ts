@@ -8,9 +8,25 @@ export const MAX_ITEMS = 200;
 export const MAX_PERSON_NAME = 40;
 export const MAX_ITEM_NAME = 60;
 export const MAX_TITLE = 80;
+export const MAX_PAY_ACCOUNT = 60;
 
 const centavosSchema = z.number().int().min(0).max(MAX_CENTAVOS);
 const idSchema = z.string().min(1).max(40);
+
+export const PAY_METHODS = ["gcash", "maya", "bank", "other"] as const;
+
+/** Kept as text: account numbers have leading zeros and banks mix in letters. */
+const payToSchema = z.object({
+  method: z.enum(PAY_METHODS),
+  account: z.string().min(1).max(MAX_PAY_ACCOUNT),
+});
+
+/** A transfer someone has ticked as paid, matched to the current transfers by all three fields. */
+const paidTransferSchema = z.object({
+  fromPersonId: idSchema,
+  toPersonId: idSchema,
+  amountCentavos: centavosSchema,
+});
 
 const adjustmentSchema = z.discriminatedUnion("kind", [
   z.object({
@@ -25,7 +41,13 @@ export const billSchema = z
     version: z.literal(1),
     title: z.string().max(MAX_TITLE),
     people: z
-      .array(z.object({ id: idSchema, name: z.string().min(1).max(MAX_PERSON_NAME) }))
+      .array(
+        z.object({
+          id: idSchema,
+          name: z.string().min(1).max(MAX_PERSON_NAME),
+          payTo: payToSchema.optional(),
+        }),
+      )
       .max(MAX_PEOPLE),
     items: z
       .array(
@@ -40,6 +62,8 @@ export const billSchema = z
     serviceCharge: adjustmentSchema.nullable(),
     discount: adjustmentSchema.nullable(),
     payments: z.array(z.object({ personId: idSchema, handedCentavos: centavosSchema })),
+    // Bills saved before paid marks existed have no such field.
+    paidTransfers: z.array(paidTransferSchema).default([]),
   })
   .superRefine((bill, context) => {
     const personIds = new Set(bill.people.map((person) => person.id));
@@ -62,12 +86,21 @@ export const billSchema = z
     if (!payersKnown || payerIds.size !== bill.payments.length) {
       context.addIssue({ code: "custom", message: "A payment lists an unknown or repeated person" });
     }
+    const marksKnown = bill.paidTransfers.every(
+      (mark) => personIds.has(mark.fromPersonId) && personIds.has(mark.toPersonId),
+    );
+    if (!marksKnown) {
+      context.addIssue({ code: "custom", message: "A paid mark lists an unknown person" });
+    }
   });
 
 export type Bill = z.infer<typeof billSchema>;
 export type Person = Bill["people"][number];
 export type Item = Bill["items"][number];
 export type Adjustment = z.infer<typeof adjustmentSchema>;
+export type PayTo = z.infer<typeof payToSchema>;
+export type PayMethod = PayTo["method"];
+export type PaidTransfer = z.infer<typeof paidTransferSchema>;
 
 export function emptyBill(): Bill {
   return {
@@ -78,6 +111,7 @@ export function emptyBill(): Bill {
     serviceCharge: null,
     discount: null,
     payments: [],
+    paidTransfers: [],
   };
 }
 

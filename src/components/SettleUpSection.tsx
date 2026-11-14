@@ -1,12 +1,14 @@
 import { Check, Copy, Link2 } from "lucide-react";
 import { useState } from "react";
-import type { Bill } from "../domain/bill";
+import type { Bill, PayTo } from "../domain/bill";
 import { formatPesos } from "../domain/money";
-import type { Settlement } from "../domain/settle";
+import { unpaidTransferCount, type Settlement, type Transfer } from "../domain/settle";
 import type { BillTotals } from "../domain/split";
 import {
+  PAY_METHOD_LABELS,
   balanceNote,
   buildSummary,
+  formatPayTo,
   personNames,
   settlementBlockers,
 } from "../domain/summary";
@@ -18,32 +20,107 @@ type SettleUpSectionProps = {
   bill: Bill;
   totals: BillTotals;
   settlement: Settlement;
+  /** Left out where the bill is read-only, so paid marks show without a control. */
+  onTogglePaid?: (transfer: Transfer) => void;
 };
 
-type CopyTarget = "summary" | "link";
+type TransferRowProps = {
+  transfer: Transfer;
+  fromName: string;
+  toName: string;
+  payTo: PayTo | undefined;
+  isCopied: boolean;
+  onCopyAccount: (account: string) => void;
+  onTogglePaid?: (transfer: Transfer) => void;
+};
 
-export function SettleUpSection({ bill, totals, settlement }: SettleUpSectionProps) {
-  const [copied, setCopied] = useState<CopyTarget | null>(null);
+function TransferRow({
+  transfer,
+  fromName,
+  toName,
+  payTo,
+  isCopied,
+  onCopyAccount,
+  onTogglePaid,
+}: TransferRowProps) {
+  const paidId = `paid-${transfer.fromPersonId}-${transfer.toPersonId}`;
+  const showPayTo = payTo !== undefined && !transfer.isPaid;
+
+  return (
+    <li className="transfer" data-paid={transfer.isPaid || undefined}>
+      <div className="transfer__main">
+        <span className="transfer__people">
+          <strong>{fromName}</strong> {transfer.isPaid ? "paid" : "pays"} <strong>{toName}</strong>
+        </span>
+        <span className="amount transfer__amount">{formatPesos(transfer.amountCentavos)}</span>
+      </div>
+      {(showPayTo || onTogglePaid || transfer.isPaid) && (
+        <div className="transfer__meta">
+          {showPayTo && (
+            <span className="transfer__pay-to">
+              <span className="transfer__account">{formatPayTo(payTo)}</span>
+              <button
+                type="button"
+                className="text-button"
+                aria-label={`Copy ${toName}'s ${PAY_METHOD_LABELS[payTo.method]} details`}
+                onClick={() => onCopyAccount(payTo.account)}
+              >
+                {isCopied ? (
+                  <Check size={16} strokeWidth={2} aria-hidden="true" />
+                ) : (
+                  <Copy size={16} strokeWidth={1.75} aria-hidden="true" />
+                )}
+                {isCopied ? "Copied" : "Copy"}
+              </button>
+            </span>
+          )}
+          {onTogglePaid ? (
+            <span className="paid-toggle">
+              <input
+                id={paidId}
+                type="checkbox"
+                checked={transfer.isPaid}
+                onChange={() => onTogglePaid(transfer)}
+              />
+              <label htmlFor={paidId}>
+                Paid<span className="visually-hidden">: {fromName} to {toName}</span>
+              </label>
+            </span>
+          ) : (
+            transfer.isPaid && <span className="paid-badge">Paid</span>
+          )}
+        </div>
+      )}
+    </li>
+  );
+}
+
+export function SettleUpSection({
+  bill,
+  totals,
+  settlement,
+  onTogglePaid,
+}: SettleUpSectionProps) {
+  const [copied, setCopied] = useState<string | null>(null);
   const [manualCopyText, setManualCopyText] = useState<string | null>(null);
 
   const names = personNames(bill);
   const nameOf = (personId: string) => names.get(personId) ?? "Someone";
+  const payToByPerson = new Map(bill.people.map((person) => [person.id, person.payTo]));
   const blockers = settlementBlockers(totals, settlement);
   const isSettled = blockers.length === 0;
+  const allPaid = settlement.transfers.length > 0 && unpaidTransferCount(settlement) === 0;
   const changeLines = settlement.balances.filter((entry) => entry.changeCentavos > 0);
   const hasContent = bill.people.length > 0 && bill.items.length > 0;
   const hasAdjustments = totals.serviceChargeCentavos > 0 || totals.discountCentavos > 0;
 
-  async function copy(target: CopyTarget) {
-    const text =
-      target === "summary"
-        ? buildSummary(bill, totals, settlement)
-        : buildShareUrl(bill, window.location.href);
+  /** `key` says which button shows "copied", since several can copy. */
+  async function copy(key: string, text: string) {
     try {
       await navigator.clipboard.writeText(text);
       setManualCopyText(null);
-      setCopied(target);
-      window.setTimeout(() => setCopied(null), 2000);
+      setCopied(key);
+      window.setTimeout(() => setCopied((current) => (current === key ? null : current)), 2000);
     } catch {
       // The browser refused clipboard access, so show the text to copy by hand.
       setCopied(null);
@@ -82,19 +159,31 @@ export function SettleUpSection({ bill, totals, settlement }: SettleUpSectionPro
                 Everyone is settled. Nobody owes anything.
               </p>
             ) : (
-              <ol className="transfers">
-                {settlement.transfers.map((transfer) => (
-                  <li key={`${transfer.fromPersonId}-${transfer.toPersonId}`} className="transfer">
-                    <span className="transfer__people">
-                      <strong>{nameOf(transfer.fromPersonId)}</strong> pays{" "}
-                      <strong>{nameOf(transfer.toPersonId)}</strong>
-                    </span>
-                    <span className="amount transfer__amount">
-                      {formatPesos(transfer.amountCentavos)}
-                    </span>
-                  </li>
-                ))}
-              </ol>
+              <>
+                {allPaid && (
+                  <p className="settle__done">
+                    <Check size={20} strokeWidth={2} aria-hidden="true" />
+                    All payments made.
+                  </p>
+                )}
+                <ol className="transfers">
+                  {settlement.transfers.map((transfer) => {
+                    const key = `${transfer.fromPersonId}-${transfer.toPersonId}`;
+                    return (
+                      <TransferRow
+                        key={key}
+                        transfer={transfer}
+                        fromName={nameOf(transfer.fromPersonId)}
+                        toName={nameOf(transfer.toPersonId)}
+                        payTo={payToByPerson.get(transfer.toPersonId)}
+                        isCopied={copied === `account-${key}`}
+                        onCopyAccount={(account) => copy(`account-${key}`, account)}
+                        onTogglePaid={onTogglePaid}
+                      />
+                    );
+                  })}
+                </ol>
+              </>
             )}
             {changeLines.map((entry) => (
               <p key={entry.personId} className="settle__note">
@@ -144,7 +233,11 @@ export function SettleUpSection({ bill, totals, settlement }: SettleUpSectionPro
           </dl>
 
           <div className="settle__actions">
-            <button type="button" className="button" onClick={() => copy("summary")}>
+            <button
+              type="button"
+              className="button"
+              onClick={() => copy("summary", buildSummary(bill, totals, settlement))}
+            >
               {copied === "summary" ? (
                 <Check size={18} strokeWidth={1.75} aria-hidden="true" />
               ) : (
@@ -152,7 +245,11 @@ export function SettleUpSection({ bill, totals, settlement }: SettleUpSectionPro
               )}
               {copied === "summary" ? "Summary copied" : "Copy summary"}
             </button>
-            <button type="button" className="button button--quiet" onClick={() => copy("link")}>
+            <button
+              type="button"
+              className="button button--quiet"
+              onClick={() => copy("link", buildShareUrl(bill, window.location.href))}
+            >
               {copied === "link" ? (
                 <Check size={18} strokeWidth={1.75} aria-hidden="true" />
               ) : (

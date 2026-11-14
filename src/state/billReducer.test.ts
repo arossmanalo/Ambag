@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { billSchema, emptyBill, type Bill } from "../domain/bill";
+import type { Transfer } from "../domain/settle";
 import { billReducer } from "./billReducer";
 
 const bill: Bill = {
@@ -12,13 +13,39 @@ const bill: Bill = {
   payments: [{ personId: "ben", handedCentavos: 30_000 }],
 };
 
+const anaPaidBen = { fromPersonId: "ana", toPersonId: "ben", amountCentavos: 15_000 };
+
 describe("billReducer", () => {
-  it("takes a removed person off every order and payment", () => {
-    const next = billReducer(bill, { type: "removePerson", personId: "ben" });
+  it("takes a removed person off every order, payment and paid mark", () => {
+    const marked = billReducer(bill, { type: "toggleTransferPaid", transfer: anaPaidBen });
+    const next = billReducer(marked, { type: "removePerson", personId: "ben" });
     expect(next.people).toEqual([{ id: "ana", name: "Ana" }]);
     expect(next.items[0].sharedBy).toEqual(["ana"]);
     expect(next.payments).toEqual([]);
+    expect(next.paidTransfers).toEqual([]);
     expect(billSchema.safeParse(next).success).toBe(true);
+  });
+
+  it("ticks a transfer as paid and unticks it again", () => {
+    const marked = billReducer(bill, { type: "toggleTransferPaid", transfer: anaPaidBen });
+    expect(marked.paidTransfers).toEqual([anaPaidBen]);
+    const unmarked = billReducer(marked, { type: "toggleTransferPaid", transfer: anaPaidBen });
+    expect(unmarked.paidTransfers).toEqual([]);
+  });
+
+  it("stores only who, to whom and how much for a paid mark", () => {
+    // The settle-up panel passes a whole Transfer, which also carries isPaid.
+    const transfer: Transfer = { ...anaPaidBen, isPaid: false };
+    const marked = billReducer(bill, { type: "toggleTransferPaid", transfer });
+    expect(marked.paidTransfers).toEqual([anaPaidBen]);
+  });
+
+  it("sets and clears where a person receives money", () => {
+    const payTo = { method: "gcash" as const, account: "0917 123 4567" };
+    const set = billReducer(bill, { type: "setPayTo", personId: "ana", payTo });
+    expect(set.people[0]).toEqual({ id: "ana", name: "Ana", payTo });
+    const cleared = billReducer(set, { type: "setPayTo", personId: "ana", payTo: null });
+    expect(cleared.people[0]).toEqual({ id: "ana", name: "Ana" });
   });
 
   it("keeps one payment per person and drops it at zero", () => {

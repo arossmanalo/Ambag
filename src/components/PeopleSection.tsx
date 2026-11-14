@@ -1,4 +1,4 @@
-import { Plus, X } from "lucide-react";
+import { Plus, Wallet, X } from "lucide-react";
 import { useState, type Dispatch, type FormEvent } from "react";
 import {
   MAX_PEOPLE,
@@ -8,7 +8,9 @@ import {
   type Bill,
   type Person,
 } from "../domain/bill";
+import { formatPayTo } from "../domain/summary";
 import type { BillAction } from "../state/billReducer";
+import { PayToEditor } from "./PayToEditor";
 
 type SectionProps = {
   bill: Bill;
@@ -19,6 +21,11 @@ type PersonRowProps = SectionProps & { person: Person };
 
 function PersonRow({ bill, dispatch, person }: PersonRowProps) {
   const [draft, setDraft] = useState<string | null>(null);
+  const [isEditingPayTo, setIsEditingPayTo] = useState(false);
+  const payToButtonLabel =
+    person.payTo === undefined
+      ? `Add how to pay ${person.name}`
+      : `Change how to pay ${person.name}`;
 
   function commit() {
     const name = (draft ?? "").trim();
@@ -42,28 +49,53 @@ function PersonRow({ bill, dispatch, person }: PersonRowProps) {
 
   return (
     <li className="person-row">
-      <input
-        className="text-input text-input--quiet"
-        aria-label={`Name of ${person.name}`}
-        maxLength={MAX_PERSON_NAME}
-        value={draft ?? person.name}
-        onFocus={() => setDraft(person.name)}
-        onChange={(event) => setDraft(event.target.value)}
-        onBlur={commit}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") {
-            event.currentTarget.blur();
-          }
-        }}
-      />
-      <button
-        type="button"
-        className="icon-button"
-        aria-label={`Remove ${person.name}`}
-        onClick={remove}
-      >
-        <X size={18} strokeWidth={1.75} aria-hidden="true" />
-      </button>
+      <div className="person-row__main">
+        <input
+          className="text-input text-input--quiet"
+          aria-label={`Name of ${person.name}`}
+          maxLength={MAX_PERSON_NAME}
+          value={draft ?? person.name}
+          onFocus={() => setDraft(person.name)}
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={commit}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.currentTarget.blur();
+            }
+          }}
+        />
+        <button
+          type="button"
+          className="icon-button icon-button--neutral"
+          aria-label={payToButtonLabel}
+          title={payToButtonLabel}
+          aria-expanded={isEditingPayTo}
+          onClick={() => setIsEditingPayTo(!isEditingPayTo)}
+        >
+          <Wallet size={18} strokeWidth={1.75} aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          className="icon-button"
+          aria-label={`Remove ${person.name}`}
+          onClick={remove}
+        >
+          <X size={18} strokeWidth={1.75} aria-hidden="true" />
+        </button>
+      </div>
+      {isEditingPayTo ? (
+        <PayToEditor
+          personId={person.id}
+          personName={person.name}
+          payTo={person.payTo}
+          onSave={(payTo) => dispatch({ type: "setPayTo", personId: person.id, payTo })}
+          onClose={() => setIsEditingPayTo(false)}
+        />
+      ) : (
+        person.payTo !== undefined && (
+          <p className="person-row__pay-to">{formatPayTo(person.payTo)}</p>
+        )
+      )}
     </li>
   );
 }
@@ -93,11 +125,19 @@ export function PeopleSection({ bill, dispatch }: SectionProps) {
       {bill.people.length === 0 ? (
         <p className="hint">Nobody yet. Add everyone who ate, including whoever paid.</p>
       ) : (
-        <ul className="plain-list">
-          {bill.people.map((person) => (
-            <PersonRow key={person.id} bill={bill} dispatch={dispatch} person={person} />
-          ))}
-        </ul>
+        <>
+          <ul className="plain-list">
+            {bill.people.map((person) => (
+              <PersonRow key={person.id} bill={bill} dispatch={dispatch} person={person} />
+            ))}
+          </ul>
+          {bill.people.every((person) => person.payTo === undefined) && (
+            <p className="hint people-hint">
+              Use the wallet button to add someone's GCash or Maya number, so the others know
+              where to send their share.
+            </p>
+          )}
+        </>
       )}
 
       <form className="add-row" onSubmit={addPerson}>

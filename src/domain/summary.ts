@@ -1,4 +1,4 @@
-import type { Bill } from "./bill";
+import type { Bill, PayMethod, PayTo } from "./bill";
 import { formatPesos } from "./money";
 import type { PersonBalance, Settlement } from "./settle";
 import type { BillTotals } from "./split";
@@ -27,16 +27,38 @@ export function settlementBlockers(totals: BillTotals, settlement: Settlement): 
   return blockers;
 }
 
-/** One line saying where a person stands once the restaurant's change is accounted for. */
+export const PAY_METHOD_LABELS: Record<PayMethod, string> = {
+  gcash: "GCash",
+  maya: "Maya",
+  bank: "Bank",
+  other: "Other",
+};
+
+/** "GCash 0917 123 4567". For "other" the account text already says what it is. */
+export function formatPayTo(payTo: PayTo): string {
+  return payTo.method === "other"
+    ? payTo.account
+    : `${PAY_METHOD_LABELS[payTo.method]} ${payTo.account}`;
+}
+
+/**
+ * One line saying where a person stands once the restaurant's change and
+ * any transfers ticked as paid are accounted for.
+ */
 export function balanceNote(entry: PersonBalance): string {
   const paidCentavos = entry.handedCentavos - entry.changeCentavos;
   const paid = paidCentavos > 0 ? `Paid ${formatPesos(paidCentavos)}` : null;
-  if (entry.balanceCentavos > 0) {
-    return `${paid}, gets back ${formatPesos(entry.balanceCentavos)}`;
+  const outstanding = entry.outstandingCentavos;
+  if (outstanding > 0) {
+    const verb = outstanding === entry.balanceCentavos ? "gets back" : "still to get back";
+    return `${paid}, ${verb} ${formatPesos(outstanding)}`;
   }
-  if (entry.balanceCentavos < 0) {
-    const owed = formatPesos(-entry.balanceCentavos);
+  if (outstanding < 0) {
+    const owed = formatPesos(-outstanding);
     return paid === null ? `Owes ${owed}` : `${paid}, still owes ${owed}`;
+  }
+  if (entry.balanceCentavos !== 0) {
+    return paid === null ? "All settled" : `${paid}, all settled`;
   }
   return paid === null ? "Nothing to pay" : `${paid}, all square`;
 }
@@ -72,11 +94,19 @@ export function buildSummary(bill: Bill, totals: BillTotals, settlement: Settlem
   } else if (settlement.transfers.length === 0) {
     lines.push("", "Everyone is settled.");
   } else {
+    const payToByPerson = new Map(bill.people.map((person) => [person.id, person.payTo]));
     lines.push("", "Who pays whom");
     for (const transfer of settlement.transfers) {
       const from = nameOf(transfer.fromPersonId);
       const to = nameOf(transfer.toPersonId);
-      lines.push(`${from} pays ${to} ${formatPesos(transfer.amountCentavos)}`);
+      const amount = formatPesos(transfer.amountCentavos);
+      if (transfer.isPaid) {
+        lines.push(`${from} paid ${to} ${amount}`);
+        continue;
+      }
+      const payTo = payToByPerson.get(transfer.toPersonId);
+      const via = payTo === undefined ? "" : ` via ${formatPayTo(payTo)}`;
+      lines.push(`${from} pays ${to} ${amount}${via}`);
     }
   }
   return lines.join("\n");

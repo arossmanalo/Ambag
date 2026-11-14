@@ -7,7 +7,7 @@ import { ResultBar } from "./components/ResultBar";
 import { SETTLE_UP_ID, SettleUpSection } from "./components/SettleUpSection";
 import { SharedBillView } from "./components/SharedBillView";
 import { MAX_TITLE, emptyBill, isBillEmpty, type Bill } from "./domain/bill";
-import { settle, type Settlement } from "./domain/settle";
+import { settle, unpaidTransferCount, type Settlement } from "./domain/settle";
 import { computeTotals, type BillTotals } from "./domain/split";
 import { settlementBlockers } from "./domain/summary";
 import { useBill } from "./state/useBill";
@@ -18,11 +18,14 @@ function resultStatus(totals: BillTotals, settlement: Settlement): string {
   if (settlementBlockers(totals, settlement).length > 0) {
     return "Not settled yet";
   }
-  const count = settlement.transfers.length;
-  if (count === 0) {
+  if (settlement.transfers.length === 0) {
     return "Everyone is settled";
   }
-  return count === 1 ? "1 payment to make" : `${count} payments to make`;
+  const count = unpaidTransferCount(settlement);
+  if (count === 0) {
+    return "All payments made";
+  }
+  return count === 1 ? "1 payment left" : `${count} payments left`;
 }
 
 export function App() {
@@ -137,7 +140,12 @@ export function App() {
                   settlement={settlement}
                 />
               </div>
-              <SettleUpSection bill={bill} totals={totals} settlement={settlement} />
+              <SettleUpSection
+                bill={bill}
+                totals={totals}
+                settlement={settlement}
+                onTogglePaid={(transfer) => dispatch({ type: "toggleTransferPaid", transfer })}
+              />
             </div>
             {hasResult && (
               <ResultBar

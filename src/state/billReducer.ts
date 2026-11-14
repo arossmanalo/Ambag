@@ -1,4 +1,20 @@
-import { MAX_ITEMS, MAX_PEOPLE, type Adjustment, type Bill, type Item } from "../domain/bill";
+import {
+  MAX_ITEMS,
+  MAX_PEOPLE,
+  type Adjustment,
+  type Bill,
+  type Item,
+  type PaidTransfer,
+  type PayTo,
+} from "../domain/bill";
+
+function isSameTransfer(a: PaidTransfer, b: PaidTransfer): boolean {
+  return (
+    a.fromPersonId === b.fromPersonId &&
+    a.toPersonId === b.toPersonId &&
+    a.amountCentavos === b.amountCentavos
+  );
+}
 
 export type BillAction =
   | { type: "setTitle"; title: string }
@@ -14,6 +30,8 @@ export type BillAction =
   | { type: "setServiceCharge"; adjustment: Adjustment | null }
   | { type: "setDiscount"; adjustment: Adjustment | null }
   | { type: "setPayment"; personId: string; handedCentavos: number }
+  | { type: "setPayTo"; personId: string; payTo: PayTo | null }
+  | { type: "toggleTransferPaid"; transfer: PaidTransfer }
   | { type: "replace"; bill: Bill };
 
 function updateItem(bill: Bill, itemId: string, change: (item: Item) => Item): Bill {
@@ -48,7 +66,34 @@ export function billReducer(bill: Bill, action: BillAction): Bill {
           sharedBy: item.sharedBy.filter((id) => id !== action.personId),
         })),
         payments: bill.payments.filter((payment) => payment.personId !== action.personId),
+        paidTransfers: bill.paidTransfers.filter(
+          (mark) => mark.fromPersonId !== action.personId && mark.toPersonId !== action.personId,
+        ),
       };
+    case "setPayTo":
+      return {
+        ...bill,
+        people: bill.people.map((person) => {
+          if (person.id !== action.personId) {
+            return person;
+          }
+          if (action.payTo === null) {
+            const { id, name } = person;
+            return { id, name };
+          }
+          return { ...person, payTo: action.payTo };
+        }),
+      };
+    case "toggleTransferPaid": {
+      const isMarked = bill.paidTransfers.some((mark) => isSameTransfer(mark, action.transfer));
+      const { fromPersonId, toPersonId, amountCentavos } = action.transfer;
+      return {
+        ...bill,
+        paidTransfers: isMarked
+          ? bill.paidTransfers.filter((mark) => !isSameTransfer(mark, action.transfer))
+          : [...bill.paidTransfers, { fromPersonId, toPersonId, amountCentavos }],
+      };
+    }
     case "addItem":
       if (bill.items.length >= MAX_ITEMS) {
         return bill;

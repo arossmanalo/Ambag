@@ -34,9 +34,9 @@ describe("settle", () => {
     expect(result.changeTotalCentavos).toBe(0);
     expect(result.unpaidCentavos).toBe(0);
     expect(result.transfers).toEqual([
-      { fromPersonId: "cy", toPersonId: "ana", amountCentavos: 45_000 },
-      { fromPersonId: "di", toPersonId: "ana", amountCentavos: 25_000 },
-      { fromPersonId: "di", toPersonId: "ben", amountCentavos: 10_000 },
+      { fromPersonId: "cy", toPersonId: "ana", amountCentavos: 45_000, isPaid: false },
+      { fromPersonId: "di", toPersonId: "ana", amountCentavos: 25_000, isPaid: false },
+      { fromPersonId: "di", toPersonId: "ben", amountCentavos: 10_000, isPaid: false },
     ]);
   });
 
@@ -49,9 +49,9 @@ describe("settle", () => {
     expect(ana?.changeCentavos).toBe(50_000);
     expect(ana?.balanceCentavos).toBe(120_000);
     expect(result.transfers).toEqual([
-      { fromPersonId: "cy", toPersonId: "ana", amountCentavos: 45_000 },
-      { fromPersonId: "ben", toPersonId: "ana", amountCentavos: 40_000 },
-      { fromPersonId: "di", toPersonId: "ana", amountCentavos: 35_000 },
+      { fromPersonId: "cy", toPersonId: "ana", amountCentavos: 45_000, isPaid: false },
+      { fromPersonId: "ben", toPersonId: "ana", amountCentavos: 40_000, isPaid: false },
+      { fromPersonId: "di", toPersonId: "ana", amountCentavos: 35_000, isPaid: false },
     ]);
   });
 
@@ -79,7 +79,7 @@ describe("settle", () => {
     expect(change.get("ana")).toBe(100_000);
     expect(change.get("ben")).toBe(50_000);
     expect(result.transfers).toEqual([
-      { fromPersonId: "cy", toPersonId: "ben", amountCentavos: 50_000 },
+      { fromPersonId: "cy", toPersonId: "ben", amountCentavos: 50_000, isPaid: false },
     ]);
   });
 
@@ -115,5 +115,47 @@ describe("settle", () => {
   it("handles a bill with nobody on it", () => {
     const bill = emptyBill();
     expect(settle(bill, computeTotals(bill)).transfers).toEqual([]);
+  });
+});
+
+describe("paid marks", () => {
+  const dinnerPayments = [
+    { personId: "ana", handedCentavos: 100_000 },
+    { personId: "ben", handedCentavos: 50_000 },
+  ];
+  const cyPaidAna = { fromPersonId: "cy", toPersonId: "ana", amountCentavos: 45_000 };
+
+  it("ticks only the transfer that was marked and keeps the others the same", () => {
+    const result = settleBill({ payments: dinnerPayments, paidTransfers: [cyPaidAna] });
+    expect(result.transfers.map((transfer) => transfer.isPaid)).toEqual([true, false, false]);
+    expect(result.transfers.map((transfer) => transfer.amountCentavos)).toEqual([
+      45_000, 25_000, 10_000,
+    ]);
+  });
+
+  it("counts a paid transfer in what is still outstanding", () => {
+    const result = settleBill({ payments: dinnerPayments, paidTransfers: [cyPaidAna] });
+    const outstanding = new Map(
+      result.balances.map((entry) => [entry.personId, entry.outstandingCentavos]),
+    );
+    expect(outstanding.get("ana")).toBe(25_000);
+    expect(outstanding.get("cy")).toBe(0);
+    expect(outstanding.get("di")).toBe(-35_000);
+  });
+
+  it("drops the tick when an edit changes the transfer amount", () => {
+    const result = settleBill({
+      items: dinnerItems.map((item) =>
+        item.id === "i3" ? { ...item, priceCentavos: 50_000 } : item,
+      ),
+      payments: [
+        { personId: "ana", handedCentavos: 105_000 },
+        { personId: "ben", handedCentavos: 50_000 },
+      ],
+      paidTransfers: [cyPaidAna],
+    });
+    const cyToAna = result.transfers.find((transfer) => transfer.fromPersonId === "cy");
+    expect(cyToAna?.amountCentavos).toBe(50_000);
+    expect(cyToAna?.isPaid).toBe(false);
   });
 });

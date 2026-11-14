@@ -9,12 +9,15 @@ export type PersonBalance = {
   changeCentavos: number;
   /** Positive: others owe this person. Negative: this person owes. */
   balanceCentavos: number;
+  /** The balance left once transfers ticked as paid are counted. */
+  outstandingCentavos: number;
 };
 
 export type Transfer = {
   fromPersonId: string;
   toPersonId: string;
   amountCentavos: number;
+  isPaid: boolean;
 };
 
 export type Settlement = {
@@ -53,9 +56,11 @@ function assignChange(
 }
 
 /** Pairs the person who owes the most with the person owed the most until all are square. */
-function planTransfers(balances: PersonBalance[]): Transfer[] {
+function planTransfers(
+  balances: { personId: string; balanceCentavos: number }[],
+): Omit<Transfer, "isPaid">[] {
   const open = balances.map((entry) => ({ id: entry.personId, amount: entry.balanceCentavos }));
-  const transfers: Transfer[] = [];
+  const transfers: Omit<Transfer, "isPaid">[] = [];
   for (;;) {
     const debtor = open.reduce((worst, entry) => (entry.amount < worst.amount ? entry : worst));
     const creditor = open.reduce((best, entry) => (entry.amount > best.amount ? entry : best));
@@ -81,7 +86,7 @@ export function settle(bill: Bill, totals: BillTotals): Settlement {
   const unpaidCentavos = Math.max(0, totals.totalCentavos - handedTotalCentavos);
   const changeByPerson = assignChange(bill, handedByPerson, changeTotalCentavos);
 
-  const balances = bill.people.map((person) => {
+  const rawBalances = bill.people.map((person) => {
     const shareCentavos = totals.shareByPerson.get(person.id) ?? 0;
     const handedCentavos = handedByPerson.get(person.id) ?? 0;
     const changeCentavos = changeByPerson.get(person.id) ?? 0;
@@ -95,7 +100,31 @@ export function settle(bill: Bill, totals: BillTotals): Settlement {
   });
 
   const isComplete = unpaidCentavos === 0 && totals.unassignedItemIds.length === 0;
-  const transfers = isComplete && balances.length > 0 ? planTransfers(balances) : [];
+  const planned = isComplete && rawBalances.length > 0 ? planTransfers(rawBalances) : [];
+  const transfers = planned.map((transfer) => ({
+    ...transfer,
+    isPaid: bill.paidTransfers.some(
+      (mark) =>
+        mark.fromPersonId === transfer.fromPersonId &&
+        mark.toPersonId === transfer.toPersonId &&
+        mark.amountCentavos === transfer.amountCentavos,
+    ),
+  }));
+
+  const paidTransfers = transfers.filter((transfer) => transfer.isPaid);
+  const balances = rawBalances.map((entry) => {
+    const sent = paidTransfers
+      .filter((transfer) => transfer.fromPersonId === entry.personId)
+      .reduce((sum, transfer) => sum + transfer.amountCentavos, 0);
+    const received = paidTransfers
+      .filter((transfer) => transfer.toPersonId === entry.personId)
+      .reduce((sum, transfer) => sum + transfer.amountCentavos, 0);
+    return { ...entry, outstandingCentavos: entry.balanceCentavos + sent - received };
+  });
 
   return { handedTotalCentavos, changeTotalCentavos, unpaidCentavos, balances, transfers };
+}
+
+export function unpaidTransferCount(settlement: Settlement): number {
+  return settlement.transfers.filter((transfer) => !transfer.isPaid).length;
 }
