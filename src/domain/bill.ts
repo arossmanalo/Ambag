@@ -3,6 +3,11 @@ import { z } from "zod";
 /** ₱999,999,999.99. Keeps every sum well inside the safe integer range. */
 export const MAX_CENTAVOS = 99_999_999_999;
 export const MAX_BASIS_POINTS = 10_000;
+export const MAX_PEOPLE = 50;
+export const MAX_ITEMS = 200;
+export const MAX_PERSON_NAME = 40;
+export const MAX_ITEM_NAME = 60;
+export const MAX_TITLE = 80;
 
 const centavosSchema = z.number().int().min(0).max(MAX_CENTAVOS);
 const idSchema = z.string().min(1).max(40);
@@ -18,18 +23,20 @@ const adjustmentSchema = z.discriminatedUnion("kind", [
 export const billSchema = z
   .object({
     version: z.literal(1),
-    title: z.string().max(80),
-    people: z.array(z.object({ id: idSchema, name: z.string().max(40) })).max(50),
+    title: z.string().max(MAX_TITLE),
+    people: z
+      .array(z.object({ id: idSchema, name: z.string().min(1).max(MAX_PERSON_NAME) }))
+      .max(MAX_PEOPLE),
     items: z
       .array(
         z.object({
           id: idSchema,
-          name: z.string().max(60),
+          name: z.string().max(MAX_ITEM_NAME),
           priceCentavos: centavosSchema,
           sharedBy: z.array(idSchema),
         }),
       )
-      .max(200),
+      .max(MAX_ITEMS),
     serviceCharge: adjustmentSchema.nullable(),
     discount: adjustmentSchema.nullable(),
     payments: z.array(z.object({ personId: idSchema, handedCentavos: centavosSchema })),
@@ -72,6 +79,17 @@ export function emptyBill(): Bill {
     discount: null,
     payments: [],
   };
+}
+
+export function isBillEmpty(bill: Bill): boolean {
+  return bill.title === "" && bill.people.length === 0 && bill.items.length === 0;
+}
+
+export function isNameTaken(people: Person[], name: string, exceptPersonId?: string): boolean {
+  const wanted = name.trim().toLowerCase();
+  return people.some(
+    (person) => person.id !== exceptPersonId && person.name.toLowerCase() === wanted,
+  );
 }
 
 /** Short ids keep the share link small. */
