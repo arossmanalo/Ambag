@@ -5,7 +5,7 @@ export type BillAction =
   | { type: "addPerson"; id: string; name: string }
   | { type: "renamePerson"; personId: string; name: string }
   | { type: "removePerson"; personId: string }
-  | { type: "addItem"; id: string; name: string; priceCentavos: number }
+  | { type: "addItem"; id: string; name: string; priceCentavos: number; sharedBy: string[] }
   | { type: "renameItem"; itemId: string; name: string }
   | { type: "setItemPrice"; itemId: string; priceCentavos: number }
   | { type: "toggleSharer"; itemId: string; personId: string }
@@ -57,7 +57,12 @@ export function billReducer(bill: Bill, action: BillAction): Bill {
         ...bill,
         items: [
           ...bill.items,
-          { id: action.id, name: action.name, priceCentavos: action.priceCentavos, sharedBy: [] },
+          {
+            id: action.id,
+            name: action.name,
+            priceCentavos: action.priceCentavos,
+            sharedBy: action.sharedBy,
+          },
         ],
       };
     case "renameItem":

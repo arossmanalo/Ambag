@@ -35,8 +35,19 @@ describe("billReducer", () => {
     expect(on.items[0].sharedBy).toEqual(["ben", "ana"]);
   });
 
-  it("adds a new order with nobody assigned yet", () => {
-    const next = billReducer(bill, { type: "addItem", id: "i2", name: "Rice", priceCentavos: 5_000 });
-    expect(next.items[1]).toEqual({ id: "i2", name: "Rice", priceCentavos: 5_000, sharedBy: [] });
+  it("adds a new order with the people picked for it", () => {
+    const next = billReducer(bill, {
+      type: "addItem",
+      id: "i2",
+      name: "Rice",
+      priceCentavos: 5_000,
+      sharedBy: ["ben"],
+    });
+    expect(next.items[1]).toEqual({
+      id: "i2",
+      name: "Rice",
+      priceCentavos: 5_000,
+      sharedBy: ["ben"],
+    });
   });
 });

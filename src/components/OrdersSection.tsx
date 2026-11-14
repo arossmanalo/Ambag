@@ -1,4 +1,4 @@
-import { Check, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { useRef, useState, type Dispatch, type FormEvent } from "react";
 import {
   MAX_ITEMS,
@@ -10,6 +10,7 @@ import {
 } from "../domain/bill";
 import type { BillAction } from "../state/billReducer";
 import { MoneyInput } from "./MoneyInput";
+import { PeopleChips } from "./PeopleChips";
 
 type SectionProps = {
   bill: Bill;
@@ -52,34 +53,13 @@ function OrderRow({ bill, dispatch, item, position }: OrderRowProps) {
         {bill.people.length === 0 ? (
           <p className="hint">Add people above, then pick who ordered this.</p>
         ) : (
-          <div className="chips" role="group" aria-label={`Who ordered ${label}`}>
-            {bill.people.map((person) => {
-              const isOn = item.sharedBy.includes(person.id);
-              return (
-                <button
-                  key={person.id}
-                  type="button"
-                  className="chip"
-                  aria-pressed={isOn}
-                  onClick={() =>
-                    dispatch({ type: "toggleSharer", itemId: item.id, personId: person.id })
-                  }
-                >
-                  {isOn && <Check size={16} strokeWidth={2} aria-hidden="true" />}
-                  {person.name}
-                </button>
-              );
-            })}
-            {bill.people.length > 1 && item.sharedBy.length < bill.people.length && (
-              <button
-                type="button"
-                className="chip chip--action"
-                onClick={() => dispatch({ type: "shareWithEveryone", itemId: item.id })}
-              >
-                All
-              </button>
-            )}
-          </div>
+          <PeopleChips
+            label={`Who ordered ${label}`}
+            people={bill.people}
+            selectedIds={item.sharedBy}
+            onToggle={(personId) => dispatch({ type: "toggleSharer", itemId: item.id, personId })}
+            onSelectAll={() => dispatch({ type: "shareWithEveryone", itemId: item.id })}
+          />
         )}
         <button
           type="button"
@@ -169,17 +149,29 @@ function AdjustmentField({ id, label, defaultKind, adjustment, onChange }: Adjus
 export function OrdersSection({ bill, dispatch }: SectionProps) {
   const [name, setName] = useState("");
   const [priceCentavos, setPriceCentavos] = useState<number | null>(null);
+  const [pickedIds, setPickedIds] = useState<string[]>([]);
   const nameInput = useRef<HTMLInputElement>(null);
   const isFull = bill.items.length >= MAX_ITEMS;
+  // Someone picked here may have been removed from the bill since.
+  const sharedBy = bill.people.map((person) => person.id).filter((id) => pickedIds.includes(id));
+
+  function togglePicked(personId: string) {
+    setPickedIds(
+      sharedBy.includes(personId)
+        ? sharedBy.filter((id) => id !== personId)
+        : [...sharedBy, personId],
+    );
+  }
 
   function addOrder(event: FormEvent) {
     event.preventDefault();
     if (priceCentavos === null || isFull) {
       return;
     }
-    dispatch({ type: "addItem", id: newId(), name: name.trim(), priceCentavos });
+    dispatch({ type: "addItem", id: newId(), name: name.trim(), priceCentavos, sharedBy });
     setName("");
     setPriceCentavos(null);
+    setPickedIds([]);
     nameInput.current?.focus();
   }
 
@@ -231,6 +223,18 @@ export function OrdersSection({ bill, dispatch }: SectionProps) {
             onChange={setPriceCentavos}
           />
         </div>
+        {bill.people.length > 0 && (
+          <div className="add-order__people">
+            <p className="hint">Who ordered it?</p>
+            <PeopleChips
+              label="Who ordered the order to add"
+              people={bill.people}
+              selectedIds={sharedBy}
+              onToggle={togglePicked}
+              onSelectAll={() => setPickedIds(bill.people.map((person) => person.id))}
+            />
+          </div>
+        )}
         <button type="submit" className="button" disabled={priceCentavos === null || isFull}>
           <Plus size={18} strokeWidth={1.75} aria-hidden="true" />
           Add order
