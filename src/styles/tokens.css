@@ -1,0 +1,39 @@
+:root {
+  /* Warm paper neutrals, tinted toward the green accent */
+  --paper: #f6f3ea;
+  --paper-raised: #fdfbf5;
+  --rule: #d9d3c2;
+  --rule-strong: #b3ac98;
+  --ink-soft: #6a6657;
+  --ink: #23261f;
+
+  --accent: #1f6b45;
+  --accent-ink: #f6f3ea;
+  --accent-wash: #e2ecdf;
+  --danger: #a3341f;
+  --danger-wash: #f5e2da;
+
+  --font-text: "IBM Plex Sans", sans-serif;
+  --font-amount: "IBM Plex Mono", monospace;
+
+  --text-xs: 0.8125rem;
+  --text-sm: 0.9375rem;
+  --text-base: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.75rem;
+  --text-2xl: 2.5rem;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  --radius: 4px;
+  --shadow-float: 0 6px 20px rgb(35 38 31 / 0.18);
+
+  --control-height: 44px;
+  --motion: 180ms ease-out;
+}
